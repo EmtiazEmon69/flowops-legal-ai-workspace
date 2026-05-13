@@ -4,25 +4,21 @@ import {
   BarChart3,
   Bell,
   Bot,
-  BriefcaseBusiness,
   CheckCircle2,
-  ClipboardCheck,
   FileSearch,
   FileText,
-  FolderKanban,
   Lock,
   Mic,
   Plus,
   RotateCcw,
   Search,
-  Send,
   Settings,
   Upload,
   Users,
   Wand2,
   X
 } from "lucide-react";
-import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type View = "dashboard" | "team" | "clients" | "documents" | "drafting" | "reminders" | "transcription" | "search" | "analytics" | "settings";
 type Client = { id: string; name: string; email: string; phone: string; matter: string; status: string; priority: "High" | "Medium" | "Low"; notes: string; createdAt: string };
@@ -32,7 +28,7 @@ type Draft = { id: string; type: string; client: string; prompt: string; output:
 type Transcript = { id: string; client: string; source: string; summary: string; actions: string[]; createdAt: string };
 type TeamMember = { id: string; name: string; role: string; access: string };
 
-const today = new Date().toISOString().slice(0, 10);
+const today = "2026-05-14";
 
 const starter = {
   clients: [
@@ -211,6 +207,9 @@ export default function Home() {
             <button className="rounded-md border border-white/10 px-3 py-2 text-xs text-[#8eaecb] hover:bg-[#0d1f38]" onClick={restoreDemo}>
               Sample data
             </button>
+            <span className={`hidden rounded-full px-3 py-2 text-xs md:inline-flex ${ready ? "bg-[#3eb87a]/10 text-[#3eb87a]" : "bg-[#e09a30]/10 text-[#e09a30]"}`}>
+              {ready ? "Ready" : "Starting"}
+            </span>
             <button className="inline-flex items-center gap-2 rounded-md border border-white/10 px-3 py-2 text-xs text-[#8eaecb] hover:bg-[#0d1f38]" onClick={resetWorkspace}>
               <RotateCcw size={14} />
               Fresh start
