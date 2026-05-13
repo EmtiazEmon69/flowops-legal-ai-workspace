@@ -142,7 +142,7 @@ export default function Home() {
   const [transcripts, setTranscripts] = useState<Transcript[]>(starter.transcripts);
   const [team, setTeam] = useState<TeamMember[]>(starter.team);
   const [invoices, setInvoices] = useState<Invoice[]>(starter.invoices);
-  const [modal, setModal] = useState<"client" | "reminder" | "team" | null>(null);
+  const [modal, setModal] = useState<"client" | "reminder" | "team" | "matter" | null>(null);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -274,19 +274,18 @@ export default function Home() {
             <div className="min-w-0 flex-1">
               <h1 className="truncate font-serif text-lg font-semibold">{nav.find((item) => item.id === view)?.label}</h1>
             </div>
-            <button className="rounded-md border border-white/10 px-3 py-2 text-xs text-[#8eaecb] hover:bg-[#0d1f38]" onClick={restoreDemo}>
-              Sample data
-            </button>
-            <span className={`hidden rounded-full px-3 py-2 text-xs md:inline-flex ${ready ? "bg-[#3eb87a]/10 text-[#3eb87a]" : "bg-[#e09a30]/10 text-[#e09a30]"}`}>
-              {ready ? "Ready" : "Starting"}
+            <span className={`hidden items-center gap-2 rounded-full px-3 py-2 text-sm md:inline-flex ${ready ? "text-[#3eb87a]" : "text-[#e09a30]"}`}>
+              <span className={`h-2 w-2 rounded-full ${ready ? "bg-[#3eb87a]" : "bg-[#e09a30]"}`} />
+              AI Online
             </span>
-            <button className="inline-flex items-center gap-2 rounded-md border border-white/10 px-3 py-2 text-xs text-[#8eaecb] hover:bg-[#0d1f38]" onClick={resetWorkspace}>
-              <RotateCcw size={14} />
-              Fresh start
+            <button className="inline-flex items-center gap-2 rounded-md border border-white/10 px-4 py-2 text-sm text-[#9fc8ef] hover:bg-[#0d1f38]" onClick={() => setModal("reminder")}>
+              + Reminder
             </button>
-            <button className="inline-flex items-center gap-2 rounded-md bg-[#c9a84c] px-3 py-2 text-xs font-medium text-[#060e1c]" onClick={() => setModal("client")}>
-              <Plus size={14} />
-              Client
+            <button className="inline-flex items-center gap-2 rounded-md border border-white/10 px-4 py-2 text-sm text-[#9fc8ef] hover:bg-[#0d1f38]" onClick={() => setModal("client")}>
+              + Client
+            </button>
+            <button className="inline-flex items-center gap-2 rounded-md bg-[#c9a84c] px-4 py-2 text-sm font-medium text-[#060e1c]" onClick={() => setModal("matter")}>
+              + New Matter
             </button>
           </header>
 
@@ -311,6 +310,7 @@ export default function Home() {
       {modal === "client" && <ClientModal close={() => setModal(null)} setClients={setClients} notify={notify} />}
       {modal === "reminder" && <ReminderModal close={() => setModal(null)} clients={clients} setReminders={setReminders} notify={notify} />}
       {modal === "team" && <TeamModal close={() => setModal(null)} setTeam={setTeam} notify={notify} />}
+      {modal === "matter" && <MatterModal close={() => setModal(null)} clients={clients} setMatters={setMatters} notify={notify} />}
       <Toast message={toast} />
     </main>
   );
@@ -917,6 +917,41 @@ function ReminderModal({ close, clients, setReminders, notify }: { close: () => 
   }
 
   return <Modal title="Add reminder" close={close}><form className="space-y-3" onSubmit={submit}><input name="title" className="form-field" placeholder="Reminder title" required /><select name="client" className="form-field">{clients.map((client) => <option key={client.id}>{client.name}</option>)}</select><input name="due" className="form-field" type="date" defaultValue={today} /><select name="channel" className="form-field"><option>Email</option><option>SMS</option><option>Email + SMS</option><option>WhatsApp</option></select><SubmitRow close={close} label="Schedule" /></form></Modal>;
+}
+
+function MatterModal({ close, clients, setMatters, notify }: { close: () => void; clients: Client[]; setMatters: (updater: (items: Matter[]) => Matter[]) => void; notify: (message: string) => void }) {
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const required = Number(data.get("required") || 6);
+    setMatters((items) => [{
+      id: id("m"),
+      ref: String(data.get("ref") || `MAT-${Date.now().toString().slice(-5)}`),
+      client: String(data.get("client") || clients[0]?.name || "Unassigned"),
+      type: String(data.get("type") || "General"),
+      progress: 0,
+      status: "New matter",
+      due: String(data.get("due") || today),
+      documentsRequired: required,
+      documentsReceived: 0
+    }, ...items]);
+    close();
+    notify("New matter created");
+  }
+
+  return (
+    <Modal title="New matter" close={close}>
+      <form className="space-y-3" onSubmit={submit}>
+        <input name="ref" className="form-field" placeholder="Matter reference, e.g. MAT-2026-004" />
+        <select name="client" className="form-field">{[...clients.map((client) => client.name), "Unassigned"].map((name) => <option key={name}>{name}</option>)}</select>
+        <select name="type" className="form-field"><option>Personal Injury</option><option>Migration</option><option>Family Law</option><option>Commercial</option><option>Conveyancing</option><option>Medical Admin</option></select>
+        <input name="required" className="form-field" type="number" min="1" defaultValue="6" />
+        <input name="due" className="form-field" type="date" defaultValue={today} />
+        <textarea name="notes" className="form-field" placeholder="Required documents or internal notes" />
+        <SubmitRow close={close} label="Create matter" />
+      </form>
+    </Modal>
+  );
 }
 
 function TeamModal({ close, setTeam, notify }: { close: () => void; setTeam: (updater: (items: TeamMember[]) => TeamMember[]) => void; notify: (message: string) => void }) {
