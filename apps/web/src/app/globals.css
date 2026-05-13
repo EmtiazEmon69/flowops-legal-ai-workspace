@@ -4,12 +4,23 @@
 
 :root {
   color-scheme: light;
+  --app-bg: #f4f7fb;
+  --app-surface: #ffffff;
+  --app-surface-soft: #f8fafc;
+  --app-border: #d9e2ef;
+  --app-text: #172033;
+  --app-muted: #5e708a;
+  --app-accent: #2563eb;
+  --app-accent-2: #0f766e;
+  --app-gold: #b88714;
+  --app-danger: #dc2626;
 }
 
 body {
   margin: 0;
-  background: #060e1c;
-  color: #e8d5b0;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 button,
@@ -22,22 +33,125 @@ select {
 .form-field {
   width: 100%;
   border-radius: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #0d1f38;
+  border: 1px solid var(--app-border);
+  background: #ffffff;
   padding: 0.75rem 0.875rem;
-  color: #e8d5b0;
+  color: var(--app-text);
   outline: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .form-field:focus {
-  border-color: rgba(201, 168, 76, 0.45);
+  border-color: rgba(37, 99, 235, 0.55);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .form-field::placeholder {
-  color: #4a6a85;
+  color: #8a9ab0;
 }
 
 .form-field option {
-  background: #0a1628;
-  color: #e8d5b0;
+  background: #ffffff;
+  color: var(--app-text);
+}
+
+/* Bright professional theme overrides for the existing Tailwind utility classes. */
+.bg-\[\#060e1c\],
+.bg-\[\#071326\] {
+  background-color: var(--app-bg) !important;
+}
+
+.bg-\[\#0a1628\] {
+  background-color: var(--app-surface) !important;
+}
+
+.bg-\[\#0d1f38\],
+.bg-\[\#0d2340\],
+.bg-\[\#102445\] {
+  background-color: var(--app-surface-soft) !important;
+}
+
+.bg-\[\#c9a84c\] {
+  background-color: var(--app-accent) !important;
+}
+
+.bg-\[\#c9a84c\]\/10 {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+}
+
+.bg-\[\#3eb87a\]\/10 {
+  background-color: rgba(15, 118, 110, 0.1) !important;
+}
+
+.bg-\[\#e05555\]\/10 {
+  background-color: rgba(220, 38, 38, 0.1) !important;
+}
+
+.bg-\[\#4a8fe8\]\/10 {
+  background-color: rgba(37, 99, 235, 0.1) !important;
+}
+
+.border-white\/10,
+.border-\[\#17345a\],
+.border-\[\#c9a84c\]\/30,
+.border-\[\#c9a84c\]\/40,
+.border-\[\#c9a84c\]\/60 {
+  border-color: var(--app-border) !important;
+}
+
+.text-\[\#e8d5b0\],
+.text-\[\#9fc8ef\],
+.text-\[\#8eaecb\],
+.text-\[\#ffd875\] {
+  color: var(--app-text) !important;
+}
+
+.text-\[\#4a6a85\],
+.text-\[\#4a78a1\],
+.text-\[\#3c6c96\],
+.text-\[\#4f82ae\] {
+  color: var(--app-muted) !important;
+}
+
+.text-\[\#c9a84c\],
+.text-\[\#f4b13d\] {
+  color: var(--app-accent) !important;
+}
+
+.text-\[\#3eb87a\] {
+  color: var(--app-accent-2) !important;
+}
+
+.text-\[\#e05555\] {
+  color: var(--app-danger) !important;
+}
+
+.text-\[\#060e1c\] {
+  color: #ffffff !important;
+}
+
+.hover\:bg-\[\#0d1f38\]:hover,
+.hover\:bg-\[\#102a4d\]:hover {
+  background-color: #eef4ff !important;
+}
+
+.hover\:text-\[\#e8d5b0\]:hover {
+  color: var(--app-accent) !important;
+}
+
+.hover\:border-\[\#c9a84c\]\/40:hover,
+.hover\:border-\[\#c9a84c\]\/50:hover {
+  border-color: rgba(37, 99, 235, 0.45) !important;
+}
+
+.shadow-2xl {
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18) !important;
+}
+
+aside {
+  box-shadow: 1px 0 0 rgba(15, 23, 42, 0.04);
+}
+
+table tr:hover {
+  background: #f8fbff;
 }
