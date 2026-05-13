@@ -1,0 +1,9 @@
+{
+  "name": "flowops-ai",
+  "private": true,
+  "scripts": {
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:api": "cd backend && uvicorn app.main:app --reload --port 8000"
+  }
+}
+
