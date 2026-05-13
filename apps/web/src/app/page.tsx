@@ -4,10 +4,13 @@ import {
   BarChart3,
   Bell,
   Bot,
+  CreditCard,
   CheckCircle2,
   FileSearch,
   FileText,
+  Folder,
   Lock,
+  HomeIcon,
   Mic,
   Plus,
   RotateCcw,
@@ -20,13 +23,16 @@ import {
 } from "lucide-react";
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
-type View = "dashboard" | "team" | "clients" | "documents" | "drafting" | "reminders" | "transcription" | "search" | "analytics" | "settings";
+type View = "dashboard" | "team" | "clients" | "matters" | "reminders" | "toolkit" | "documents" | "drafting" | "transcription" | "search" | "analytics" | "billing" | "settings";
+type NavItem = { id: View; label: string; icon: typeof BarChart3; badge?: string; badgeTone?: "red" | "amber" };
 type Client = { id: string; name: string; email: string; phone: string; matter: string; status: string; priority: "High" | "Medium" | "Low"; notes: string; createdAt: string };
+type Matter = { id: string; ref: string; client: string; type: string; progress: number; status: string; due: string; documentsRequired: number; documentsReceived: number };
 type DocumentRecord = { id: string; name: string; client: string; type: string; size: string; status: string; extracted: string; uploadedAt: string };
 type Reminder = { id: string; title: string; client: string; channel: string; due: string; status: "Pending" | "Sent" | "Overdue" };
 type Draft = { id: string; type: string; client: string; prompt: string; output: string; createdAt: string };
 type Transcript = { id: string; client: string; source: string; summary: string; actions: string[]; createdAt: string };
 type TeamMember = { id: string; name: string; role: string; access: string };
+type Invoice = { id: string; client: string; plan: string; amount: number; status: "Draft" | "Due" | "Paid"; due: string };
 
 const today = "2026-05-14";
 
@@ -39,6 +45,11 @@ const starter = {
   documents: [
     { id: "d1", name: "authority_signed.pdf", client: "Raj Mehta", type: "Authority", size: "240 KB", status: "Extracted", extracted: "Detected signed authority, date, client name, and witness field.", uploadedAt: "Today" },
     { id: "d2", name: "hospital_records.pdf", client: "John Smith", type: "Medical", size: "1.8 MB", status: "Extracted", extracted: "Detected hospital name, admission date, discharge notes, and treatment summary.", uploadedAt: "Yesterday" }
+  ],
+  matters: [
+    { id: "m1", ref: "MAT-2026-001", client: "John Smith", type: "Personal Injury", progress: 62, status: "Documents pending", due: "2026-05-21", documentsRequired: 8, documentsReceived: 5 },
+    { id: "m2", ref: "MAT-2026-002", client: "Anna Lee", type: "Family Law", progress: 78, status: "Review", due: "2026-05-24", documentsRequired: 6, documentsReceived: 5 },
+    { id: "m3", ref: "MAT-2026-003", client: "Raj Mehta", type: "Migration", progress: 45, status: "Drafting", due: "2026-05-30", documentsRequired: 10, documentsReceived: 4 }
   ],
   reminders: [
     { id: "r1", title: "Request bank statements", client: "John Smith", channel: "Email", due: today, status: "Pending" as const },
@@ -54,21 +65,56 @@ const starter = {
   team: [
     { id: "u1", name: "Emtiaz Ahamed", role: "Owner", access: "Admin" },
     { id: "u2", name: "Legal Assistant", role: "Operations", access: "Editor" }
+  ],
+  invoices: [
+    { id: "inv1", client: "John Smith", plan: "Professional", amount: 499, status: "Due" as const, due: "2026-05-28" },
+    { id: "inv2", client: "Raj Mehta", plan: "Starter", amount: 199, status: "Paid" as const, due: "2026-05-10" }
   ]
 };
 
-const nav = [
-  { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-  { id: "team", label: "Team & Roles", icon: Lock },
-  { id: "clients", label: "Clients", icon: Users },
-  { id: "documents", label: "Documents", icon: FileText },
-  { id: "drafting", label: "AI Drafting", icon: Wand2 },
-  { id: "reminders", label: "Reminders", icon: Bell },
-  { id: "transcription", label: "Transcription", icon: Mic },
-  { id: "search", label: "AI Search", icon: Search },
-  { id: "analytics", label: "Analytics", icon: BarChart3 },
-  { id: "settings", label: "Settings", icon: Settings }
-] satisfies { id: View; label: string; icon: typeof BarChart3 }[];
+const navSections: { heading: string; items: NavItem[] }[] = [
+  {
+    heading: "Main",
+    items: [
+      { id: "dashboard", label: "Dashboard", icon: HomeIcon },
+      { id: "clients", label: "Clients", icon: Users, badge: "3", badgeTone: "amber" },
+      { id: "matters", label: "Matters", icon: Folder },
+      { id: "reminders", label: "Reminders", icon: Bell, badge: "5", badgeTone: "red" }
+    ]
+  },
+  {
+    heading: "AI Tools",
+    items: [
+      { id: "toolkit", label: "AI Toolkit", icon: Bot },
+      { id: "documents", label: "Documents", icon: FileText },
+      { id: "drafting", label: "Drafting", icon: Wand2 },
+      { id: "transcription", label: "Transcription", icon: Mic },
+      { id: "search", label: "AI Search", icon: Search }
+    ]
+  },
+  {
+    heading: "Reports",
+    items: [
+      { id: "analytics", label: "Analytics", icon: BarChart3 },
+      { id: "billing", label: "Billing", icon: CreditCard },
+      { id: "team", label: "Team & Roles", icon: Lock },
+      { id: "settings", label: "Settings", icon: Settings }
+    ]
+  }
+] ;
+
+const nav = navSections.flatMap((section) => section.items);
+
+const aiModules = [
+  { id: "chaser", emoji: "📬", name: "Doc Chaser", desc: "Auto reminders", detail: "Creates missing-document reminders and client follow-up drafts." },
+  { id: "drafter", emoji: "✍️", name: "Drafter", desc: "AI documents", detail: "Generates letters, summaries, statements, and email drafts." },
+  { id: "checklist", emoji: "✅", name: "Checklist", desc: "Matter tracking", detail: "Creates a matter checklist from required tasks and document rules." },
+  { id: "transcribe", emoji: "🎙️", name: "Transcribe", desc: "Call summaries", detail: "Turns meeting notes into summaries and action items." },
+  { id: "records", emoji: "🏥", name: "Records", desc: "OCR extract", detail: "Extracts names, dates, addresses, and record details." },
+  { id: "duplicates", emoji: "🔍", name: "Duplicates", desc: "File cleanup", detail: "Finds duplicate or conflicting document records." },
+  { id: "statements", emoji: "📋", name: "Statements", desc: "SOP drafting", detail: "Drafts declarations, SOPs, affidavits, and internal statements." },
+  { id: "table", emoji: "📊", name: "Data Table", desc: "Extract data", detail: "Converts notes and records into structured data tables." }
+];
 
 function id(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -89,33 +135,39 @@ export default function Home() {
   const [view, setView] = useState<View>("dashboard");
   const [toast, setToast] = useState("");
   const [clients, setClients] = useState<Client[]>(starter.clients);
+  const [matters, setMatters] = useState<Matter[]>(starter.matters);
   const [documents, setDocuments] = useState<DocumentRecord[]>(starter.documents);
   const [reminders, setReminders] = useState<Reminder[]>(starter.reminders);
   const [drafts, setDrafts] = useState<Draft[]>(starter.drafts);
   const [transcripts, setTranscripts] = useState<Transcript[]>(starter.transcripts);
   const [team, setTeam] = useState<TeamMember[]>(starter.team);
+  const [invoices, setInvoices] = useState<Invoice[]>(starter.invoices);
   const [modal, setModal] = useState<"client" | "reminder" | "team" | null>(null);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
     setClients(loadState("flowops.clients", starter.clients));
+    setMatters(loadState("flowops.matters", starter.matters));
     setDocuments(loadState("flowops.documents", starter.documents));
     setReminders(loadState("flowops.reminders", starter.reminders));
     setDrafts(loadState("flowops.drafts", starter.drafts));
     setTranscripts(loadState("flowops.transcripts", starter.transcripts));
     setTeam(loadState("flowops.team", starter.team));
+    setInvoices(loadState("flowops.invoices", starter.invoices));
     setReady(true);
   }, []);
 
   useEffect(() => {
     if (!ready) return;
     saveState("flowops.clients", clients);
+    saveState("flowops.matters", matters);
     saveState("flowops.documents", documents);
     saveState("flowops.reminders", reminders);
     saveState("flowops.drafts", drafts);
     saveState("flowops.transcripts", transcripts);
     saveState("flowops.team", team);
-  }, [ready, clients, documents, reminders, drafts, transcripts, team]);
+    saveState("flowops.invoices", invoices);
+  }, [ready, clients, matters, documents, reminders, drafts, transcripts, team, invoices]);
 
   function notify(message: string) {
     setToast(message);
@@ -124,21 +176,25 @@ export default function Home() {
 
   function resetWorkspace() {
     setClients([]);
+    setMatters([]);
     setDocuments([]);
     setReminders([]);
     setDrafts([]);
     setTranscripts([]);
     setTeam([{ id: id("u"), name: "Workspace Owner", role: "Owner", access: "Admin" }]);
+    setInvoices([]);
     notify("Fresh workspace started");
   }
 
   function restoreDemo() {
     setClients(starter.clients);
+    setMatters(starter.matters);
     setDocuments(starter.documents);
     setReminders(starter.reminders);
     setDrafts(starter.drafts);
     setTranscripts(starter.transcripts);
     setTeam(starter.team);
+    setInvoices(starter.invoices);
     notify("Sample data restored");
   }
 
@@ -159,37 +215,45 @@ export default function Home() {
     if (!q) return [];
     return [
       ...clients.map((item) => ({ type: "Client", title: item.name, body: `${item.matter} ${item.status} ${item.notes}` })),
+      ...matters.map((item) => ({ type: "Matter", title: item.ref, body: `${item.client} ${item.type} ${item.status}` })),
       ...documents.map((item) => ({ type: "Document", title: item.name, body: `${item.client} ${item.type} ${item.extracted}` })),
       ...reminders.map((item) => ({ type: "Reminder", title: item.title, body: `${item.client} ${item.channel} ${item.status}` })),
       ...drafts.map((item) => ({ type: "Draft", title: item.type, body: `${item.client} ${item.prompt} ${item.output}` })),
-      ...transcripts.map((item) => ({ type: "Transcript", title: item.client, body: `${item.source} ${item.summary} ${item.actions.join(" ")}` }))
+      ...transcripts.map((item) => ({ type: "Transcript", title: item.client, body: `${item.source} ${item.summary} ${item.actions.join(" ")}` })),
+      ...invoices.map((item) => ({ type: "Invoice", title: item.id, body: `${item.client} ${item.plan} ${item.status} ${item.amount}` }))
     ].filter((item) => `${item.title} ${item.body}`.toLowerCase().includes(q));
-  }, [clients, documents, reminders, drafts, transcripts, query]);
+  }, [clients, matters, documents, reminders, drafts, transcripts, invoices, query]);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#060e1c] text-[#e8d5b0]">
       <div className="flex h-screen">
-        <aside className="hidden w-[232px] shrink-0 flex-col border-r border-white/10 bg-[#0a1628] lg:flex">
+        <aside className="hidden w-[268px] shrink-0 flex-col border-r border-white/10 bg-[#071326] lg:flex">
           <div className="border-b border-white/10 px-5 py-5">
-            <div className="font-serif text-xl font-bold text-[#c9a84c]">FlowOps <span className="font-light text-[#8eaecb]">AI</span></div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#4a6a85]">Practice Suite</div>
+            <div className="font-serif text-2xl font-bold text-[#c9a84c]">FlowOps <span className="font-light text-[#9fc8ef]">AI</span></div>
+            <div className="mt-1 text-[11px] uppercase tracking-[0.22em] text-[#4a78a1]">Practice Suite</div>
           </div>
-          <nav className="flex-1 overflow-y-auto px-2 py-4">
-            {nav.map((item) => {
-              const Icon = item.icon;
-              const active = view === item.id;
-              return (
-                <button
-                  className={`mb-1 flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition ${active ? "border-[#c9a84c]/30 bg-[#c9a84c]/10 text-[#c9a84c]" : "border-transparent text-[#8eaecb] hover:bg-[#0d1f38] hover:text-[#e8d5b0]"}`}
-                  key={item.id}
-                  onClick={() => setView(item.id)}
-                  title={item.label}
-                >
-                  <Icon size={17} />
-                  {item.label}
-                </button>
-              );
-            })}
+          <nav className="flex-1 overflow-y-auto px-2 py-5">
+            {navSections.map((section) => (
+              <div className="mb-5" key={section.heading}>
+                <div className="mb-2 px-1 text-[11px] uppercase tracking-[0.22em] text-[#3c6c96]">{section.heading}</div>
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = view === item.id;
+                  return (
+                    <button
+                      className={`mb-1 flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-[15px] transition ${active ? "border-[#c9a84c]/40 bg-[#c9a84c]/10 text-[#ffd875]" : "border-transparent text-[#9fc8ef] hover:bg-[#0d1f38] hover:text-[#e8d5b0]"}`}
+                      key={item.id}
+                      onClick={() => setView(item.id)}
+                      title={item.label}
+                    >
+                      <Icon size={19} />
+                      <span className="flex-1">{item.label}</span>
+                      {item.badge && <span className={`rounded-full px-2 py-0.5 text-xs font-semibold text-white ${item.badgeTone === "red" ? "bg-[#e05555]" : "bg-[#f2a93b]"}`}>{item.badge}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
           <div className="border-t border-white/10 p-3">
             <div className="rounded-lg border border-white/10 bg-[#0d1f38] p-3">
@@ -201,6 +265,12 @@ export default function Home() {
 
         <section className="flex min-w-0 flex-1 flex-col">
           <header className="flex min-h-14 items-center gap-3 border-b border-white/10 bg-[#0a1628] px-4 md:px-6">
+            {view !== "dashboard" && (
+              <button className="inline-flex items-center gap-2 rounded-md border border-white/10 px-3 py-2 text-xs text-[#9fc8ef] hover:bg-[#0d1f38]" onClick={() => setView("dashboard")}>
+                <HomeIcon size={14} />
+                Dashboard
+              </button>
+            )}
             <div className="min-w-0 flex-1">
               <h1 className="truncate font-serif text-lg font-semibold">{nav.find((item) => item.id === view)?.label}</h1>
             </div>
@@ -221,15 +291,18 @@ export default function Home() {
           </header>
 
           <div className="flex-1 overflow-y-auto p-4 md:p-6">
-            {view === "dashboard" && <Dashboard stats={stats} clients={clients} documents={documents} reminders={reminders} drafts={drafts} setView={setView} />}
+            {view === "dashboard" && <Dashboard stats={stats} clients={clients} documents={documents} reminders={reminders} drafts={drafts} matters={matters} invoices={invoices} setView={setView} />}
             {view === "team" && <TeamView team={team} setModal={setModal} />}
             {view === "clients" && <ClientsView clients={clients} setModal={setModal} />}
+            {view === "matters" && <MattersView matters={matters} clients={clients} setMatters={setMatters} notify={notify} />}
+            {view === "toolkit" && <ToolkitView clients={clients} setView={setView} setDocuments={setDocuments} setDrafts={setDrafts} setReminders={setReminders} setTranscripts={setTranscripts} notify={notify} />}
             {view === "documents" && <DocumentsView clients={clients} documents={documents} setDocuments={setDocuments} notify={notify} />}
             {view === "drafting" && <DraftingView clients={clients} drafts={drafts} setDrafts={setDrafts} notify={notify} />}
             {view === "reminders" && <RemindersView reminders={reminders} setReminders={setReminders} setModal={setModal} notify={notify} />}
             {view === "transcription" && <TranscriptionView clients={clients} transcripts={transcripts} setTranscripts={setTranscripts} notify={notify} />}
             {view === "search" && <SearchView query={query} setQuery={setQuery} results={searchResults} />}
             {view === "analytics" && <AnalyticsView stats={stats} documents={documents} drafts={drafts} reminders={reminders} transcripts={transcripts} />}
+            {view === "billing" && <BillingView clients={clients} invoices={invoices} setInvoices={setInvoices} notify={notify} />}
             {view === "settings" && <SettingsView notify={notify} />}
           </div>
         </section>
@@ -255,7 +328,7 @@ function Panel({ title, action, children }: { title: string; action?: ReactNode;
   );
 }
 
-function Dashboard({ stats, clients, documents, reminders, drafts, setView }: { stats: { label: string; value: number | string; color: string; note: string }[]; clients: Client[]; documents: DocumentRecord[]; reminders: Reminder[]; drafts: Draft[]; setView: (view: View) => void }) {
+function Dashboard({ stats, clients, documents, reminders, drafts, matters, invoices, setView }: { stats: { label: string; value: number | string; color: string; note: string }[]; clients: Client[]; documents: DocumentRecord[]; reminders: Reminder[]; drafts: Draft[]; matters: Matter[]; invoices: Invoice[]; setView: (view: View) => void }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -309,6 +382,32 @@ function Dashboard({ stats, clients, documents, reminders, drafts, setView }: { 
         <MiniModule icon={<Bot />} title="AI drafting" value={`${drafts.length} drafts`} onClick={() => setView("drafting")} />
         <MiniModule icon={<FileSearch />} title="Smart search" value="All records" onClick={() => setView("search")} />
       </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <Panel title="AI Modules" action={<button className="text-sm text-[#f4b13d]" onClick={() => setView("toolkit")}>Open toolkit →</button>}>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {aiModules.map((module) => (
+              <button className="rounded-xl border border-[#17345a] bg-[#0d2340] p-5 text-center transition hover:border-[#c9a84c]/50 hover:bg-[#102a4d]" key={module.id} onClick={() => setView("toolkit")}>
+                <div className="text-3xl">{module.emoji}</div>
+                <div className="mt-3 font-semibold text-[#ffd875]">{module.name}</div>
+                <div className="mt-1 text-sm text-[#4f82ae]">{module.desc}</div>
+              </button>
+            ))}
+          </div>
+        </Panel>
+        <Panel title="Billing snapshot" action={<button className="text-sm text-[#f4b13d]" onClick={() => setView("billing")}>Manage billing →</button>}>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-white/10 bg-[#0d1f38] p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-[#4a6a85]">Outstanding</div>
+              <div className="mt-2 font-serif text-3xl text-[#c9a84c]">${invoices.filter((item) => item.status !== "Paid").reduce((sum, item) => sum + item.amount, 0)}</div>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-[#0d1f38] p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-[#4a6a85]">Matter pipeline</div>
+              <div className="mt-2 text-sm text-[#8eaecb]">{matters.length} matters tracked with checklist progress</div>
+            </div>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }
@@ -359,6 +458,125 @@ function ClientsView({ clients, setModal }: { clients: Client[]; setModal: (moda
         ))}
       </ResponsiveTable>
     </Panel>
+  );
+}
+
+function MattersView({ matters, clients, setMatters, notify }: { matters: Matter[]; clients: Client[]; setMatters: (updater: (items: Matter[]) => Matter[]) => void; notify: (message: string) => void }) {
+  function createMatter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const required = Number(data.get("required") || 5);
+    setMatters((items) => [{
+      id: id("m"),
+      ref: String(data.get("ref") || `MAT-${Date.now().toString().slice(-5)}`),
+      client: String(data.get("client") || "Unassigned"),
+      type: String(data.get("type") || "General"),
+      progress: 0,
+      status: "New",
+      due: String(data.get("due") || today),
+      documentsRequired: required,
+      documentsReceived: 0
+    }, ...items]);
+    event.currentTarget.reset();
+    notify("Matter created");
+  }
+
+  function advanceMatter(matterId: string) {
+    setMatters((items) => items.map((matter) => {
+      if (matter.id !== matterId) return matter;
+      const received = Math.min(matter.documentsRequired, matter.documentsReceived + 1);
+      return { ...matter, documentsReceived: received, progress: Math.round((received / matter.documentsRequired) * 100), status: received === matter.documentsRequired ? "Ready for review" : "Documents pending" };
+    }));
+    notify("Matter checklist updated");
+  }
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+      <Panel title="Create matter">
+        <form className="space-y-3" onSubmit={createMatter}>
+          <input className="form-field" name="ref" placeholder="Matter reference, e.g. MAT-2026-004" />
+          <select className="form-field" name="client">{[...clients.map((client) => client.name), "Unassigned"].map((name) => <option key={name}>{name}</option>)}</select>
+          <select className="form-field" name="type"><option>Personal Injury</option><option>Migration</option><option>Family Law</option><option>Commercial</option><option>Medical Admin</option></select>
+          <input className="form-field" name="required" type="number" min="1" defaultValue="5" />
+          <input className="form-field" name="due" type="date" defaultValue={today} />
+          <button className="w-full rounded-md bg-[#c9a84c] px-4 py-3 text-sm font-medium text-[#060e1c]">Create matter</button>
+        </form>
+      </Panel>
+      <Panel title="Matter checklist tracking">
+        <div className="space-y-3">
+          {matters.map((matter) => (
+            <article className="rounded-xl border border-white/10 bg-[#0d1f38] p-4" key={matter.id}>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="font-semibold text-[#e8d5b0]">{matter.client} · {matter.ref}</div>
+                  <div className="mt-1 text-sm text-[#8eaecb]">{matter.type} · {matter.status} · Due {matter.due}</div>
+                </div>
+                <button className="rounded-md border border-white/10 px-3 py-2 text-xs text-[#9fc8ef]" onClick={() => advanceMatter(matter.id)}>Receive document</button>
+              </div>
+              <div className="mt-4 flex items-center gap-3">
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#102445]"><div className="h-full rounded-full bg-[#c9a84c]" style={{ width: `${matter.progress}%` }} /></div>
+                <span className="text-sm text-[#c9a84c]">{matter.documentsReceived}/{matter.documentsRequired}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function ToolkitView({ clients, setView, setDocuments, setDrafts, setReminders, setTranscripts, notify }: { clients: Client[]; setView: (view: View) => void; setDocuments: (updater: (items: DocumentRecord[]) => DocumentRecord[]) => void; setDrafts: (updater: (items: Draft[]) => Draft[]) => void; setReminders: (updater: (items: Reminder[]) => Reminder[]) => void; setTranscripts: (updater: (items: Transcript[]) => Transcript[]) => void; notify: (message: string) => void }) {
+  const [tool, setTool] = useState(aiModules[0]);
+  const [client, setClient] = useState(clients[0]?.name || "Unassigned");
+  const [input, setInput] = useState("");
+  const [result, setResult] = useState("");
+
+  function runTool() {
+    const text = input.trim() || "No extra context provided.";
+    const base = `${tool.name} completed for ${client}. ${tool.detail} Input used: ${text}`;
+    setResult(base);
+    if (tool.id === "chaser") {
+      setReminders((items) => [{ id: id("r"), title: "Follow up for missing documents", client, channel: "Email", due: today, status: "Pending" }, ...items]);
+    }
+    if (["drafter", "statements", "table"].includes(tool.id)) {
+      setDrafts((items) => [{ id: id("g"), type: tool.name, client, prompt: text, output: base, createdAt: "Just now" }, ...items]);
+    }
+    if (["records", "duplicates"].includes(tool.id)) {
+      setDocuments((items) => [{ id: id("d"), name: `${tool.id}-output.txt`, client, type: tool.name, size: "1 KB", status: "Extracted", extracted: base, uploadedAt: "Just now" }, ...items]);
+    }
+    if (tool.id === "transcribe") {
+      setTranscripts((items) => [{ id: id("t"), client, source: text.slice(0, 80), summary: base, actions: ["Review summary", "Assign follow-up owner"], createdAt: "Just now" }, ...items]);
+    }
+    notify(`${tool.name} finished`);
+  }
+
+  return (
+    <div className="space-y-4">
+      <Panel title="AI Modules" action={<button className="text-sm text-[#f4b13d]" onClick={() => setView("dashboard")}>Back to dashboard →</button>}>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {aiModules.map((module) => (
+            <button className={`rounded-xl border p-5 text-center transition ${tool.id === module.id ? "border-[#c9a84c]/60 bg-[#c9a84c]/10" : "border-[#17345a] bg-[#0d2340] hover:border-[#c9a84c]/50"}`} key={module.id} onClick={() => setTool(module)}>
+              <div className="text-3xl">{module.emoji}</div>
+              <div className="mt-3 font-semibold text-[#ffd875]">{module.name}</div>
+              <div className="mt-1 text-sm text-[#4f82ae]">{module.desc}</div>
+            </button>
+          ))}
+        </div>
+      </Panel>
+      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <Panel title={`${tool.name} workspace`}>
+          <div className="space-y-3">
+            <p className="text-sm text-[#8eaecb]">{tool.detail}</p>
+            <select className="form-field" value={client} onChange={(event) => setClient(event.target.value)}>{[...clients.map((item) => item.name), "Unassigned"].map((name) => <option key={name}>{name}</option>)}</select>
+            <textarea className="form-field min-h-36" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Paste notes, task instructions, document details, or transcript text..." />
+            <button className="w-full rounded-md bg-[#c9a84c] px-4 py-3 text-sm font-medium text-[#060e1c]" onClick={runTool}>Run {tool.name}</button>
+          </div>
+        </Panel>
+        <Panel title="Module output">
+          {result ? <pre className="whitespace-pre-wrap rounded-lg bg-[#060e1c] p-4 text-sm leading-6 text-[#9fc8ef]">{result}</pre> : <div className="rounded-lg border border-white/10 bg-[#0d1f38] p-4 text-sm text-[#8eaecb]">Choose a module, add context, and run it. The result will save into the matching app section.</div>}
+        </Panel>
+      </div>
+    </div>
   );
 }
 
@@ -581,6 +799,54 @@ function AnalyticsView({ stats, documents, drafts, reminders, transcripts }: { s
             </div>
           ))}
         </div>
+      </Panel>
+    </div>
+  );
+}
+
+function BillingView({ clients, invoices, setInvoices, notify }: { clients: Client[]; invoices: Invoice[]; setInvoices: (updater: (items: Invoice[]) => Invoice[]) => void; notify: (message: string) => void }) {
+  const plans = [
+    { name: "Starter", price: 199, features: "Clients, reminders, document inbox" },
+    { name: "Professional", price: 499, features: "AI toolkit, transcription, analytics" },
+    { name: "Scale", price: 999, features: "Advanced roles, automation, priority support" }
+  ];
+
+  function createInvoice(plan: string, amount: number) {
+    setInvoices((items) => [{ id: `INV-${Date.now().toString().slice(-5)}`, client: clients[0]?.name || "New client", plan, amount, status: "Due", due: today }, ...items]);
+    notify(`${plan} invoice created`);
+  }
+
+  function markPaid(invoiceId: string) {
+    setInvoices((items) => items.map((item) => item.id === invoiceId ? { ...item, status: "Paid" } : item));
+    notify("Invoice marked paid");
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-3">
+        {plans.map((plan) => (
+          <section className="rounded-xl border border-white/10 bg-[#0a1628] p-5" key={plan.name}>
+            <div className="font-serif text-xl font-semibold text-[#c9a84c]">{plan.name}</div>
+            <div className="mt-3 font-serif text-4xl">${plan.price}<span className="text-sm text-[#8eaecb]">/mo</span></div>
+            <p className="mt-3 min-h-12 text-sm text-[#8eaecb]">{plan.features}</p>
+            <button className="mt-5 w-full rounded-md bg-[#c9a84c] px-4 py-3 text-sm font-medium text-[#060e1c]" onClick={() => createInvoice(plan.name, plan.price)}>Create invoice</button>
+          </section>
+        ))}
+      </div>
+      <Panel title="Billing and invoices">
+        <ResponsiveTable headers={["Invoice", "Client", "Plan", "Amount", "Due", "Status", "Action"]}>
+          {invoices.map((invoice) => (
+            <tr className="border-b border-white/10 text-[#8eaecb]" key={invoice.id}>
+              <td className="py-3 font-medium text-[#e8d5b0]">{invoice.id}</td>
+              <td className="py-3">{invoice.client}</td>
+              <td className="py-3">{invoice.plan}</td>
+              <td className="py-3">${invoice.amount}</td>
+              <td className="py-3">{invoice.due}</td>
+              <td className="py-3"><Badge tone={invoice.status === "Paid" ? "green" : invoice.status === "Due" ? "gold" : "blue"}>{invoice.status}</Badge></td>
+              <td className="py-3">{invoice.status !== "Paid" && <button className="rounded-md border border-white/10 px-3 py-2 text-xs text-[#9fc8ef]" onClick={() => markPaid(invoice.id)}>Mark paid</button>}</td>
+            </tr>
+          ))}
+        </ResponsiveTable>
       </Panel>
     </div>
   );
